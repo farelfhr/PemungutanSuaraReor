@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import Papa from "papaparse";
+import nextEnv from "@next/env";
 import { createClient } from "@supabase/supabase-js";
 import {
   CANDIDATE_NAMES,
@@ -13,6 +14,9 @@ import {
 import type { Gender, Participant, Position } from "../src/lib/types";
 
 type RawRow = Record<string, string | undefined>;
+
+const { loadEnvConfig } = nextEnv;
+loadEnvConfig(process.cwd());
 
 const DEFAULT_LOCAL_CSV =
   "c:\\Users\\user\\Downloads\\Data PRTA.xlsx - 2025.csv";
