@@ -1,0 +1,39 @@
+{
+  "name": "pemungutan-suara-reor-prta",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "seed:participants": "tsx scripts/seed-participants.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "latest",
+    "clsx": "^2.1.1",
+    "lucide-react": "latest",
+    "next": "latest",
+    "papaparse": "^5.4.1",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwind-merge": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/papaparse": "^5.3.15",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "latest",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}
