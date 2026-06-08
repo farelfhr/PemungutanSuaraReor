@@ -100,6 +100,14 @@ export function isDeviceAllowedForPosition(
   return eligibleGender === "all" || eligibleGender === device;
 }
 
+export function isCandidateAllowedForPosition(
+  candidateGender: Gender | null,
+  position: Pick<Position, "name" | "eligible_gender">
+) {
+  if (position.name === "Ketua Umum") return candidateGender === "putra";
+  return position.eligible_gender === "all" || position.eligible_gender === candidateGender;
+}
+
 export function getVoteStatus(
   participant: Participant,
   votedIds: Set<string>

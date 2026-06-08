@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus, RefreshCcw, Trash2, UserRoundCheck } from "lucide-react";
 import { Badge, Button, Card, EmptyState, PageShell } from "@/components/ui";
 import { fetchJson } from "@/lib/client-fetch";
+import { isCandidateAllowedForPosition } from "@/lib/election";
 import { useRealtimeRefresh } from "@/lib/realtime";
 import type { Candidate, Gender, Participant, Position } from "@/lib/types";
 
@@ -56,6 +57,39 @@ export function CandidatesClient() {
       )
     }));
   }, [context]);
+  const selectedPosition = useMemo(
+    () => context?.positions.find((position) => position.id === positionId) ?? null,
+    [context, positionId]
+  );
+  const selectableParticipants = useMemo(() => {
+    if (!context || !selectedPosition) return [];
+    return context.participants.filter(
+      (participant) =>
+        participant.is_candidate &&
+        isCandidateAllowedForPosition(participant.gender, selectedPosition)
+    );
+  }, [context, selectedPosition]);
+
+  useEffect(() => {
+    if (!selectedPosition) return;
+    if (
+      participantId &&
+      !selectableParticipants.some((participant) => participant.id === participantId)
+    ) {
+      setParticipantId("");
+    }
+    if (!participantId && selectedPosition.name === "Ketua Umum" && manualGender !== "putra") {
+      setManualGender("putra");
+    }
+    if (
+      !participantId &&
+      manualGender &&
+      selectedPosition.name !== "Ketua Umum" &&
+      !isCandidateAllowedForPosition(manualGender, selectedPosition)
+    ) {
+      setManualGender("");
+    }
+  }, [manualGender, participantId, selectableParticipants, selectedPosition]);
 
   async function addCandidate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -160,13 +194,11 @@ export function CandidatesClient() {
                   onChange={(event) => setParticipantId(event.target.value)}
                 >
                   <option value="">Input manual</option>
-                  {context.participants
-                    .filter((participant) => participant.is_candidate)
-                    .map((participant) => (
-                      <option key={participant.id} value={participant.id}>
-                        {participant.name}
-                      </option>
-                    ))}
+                  {selectableParticipants.map((participant) => (
+                    <option key={participant.id} value={participant.id}>
+                      {participant.name}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -194,9 +226,13 @@ export function CandidatesClient() {
                         setManualGender(event.target.value as Gender | "")
                       }
                     >
-                      <option value="">Tidak diisi</option>
+                      {selectedPosition?.name === "Ketua Umum" ? null : (
+                        <option value="">Tidak diisi</option>
+                      )}
                       <option value="putra">Putra</option>
-                      <option value="putri">Putri</option>
+                      {selectedPosition?.name === "Ketua Umum" ? null : (
+                        <option value="putri">Putri</option>
+                      )}
                     </select>
                   </label>
                 </>

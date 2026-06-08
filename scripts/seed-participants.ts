@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   CANDIDATE_NAMES,
   cleanText,
+  isCandidateAllowedForPosition,
   normalizeGender,
   normalizeName,
   toTitleName
@@ -96,7 +97,7 @@ function shouldSeedCandidateForPosition(
   candidateGender: Gender | null,
   position: Position
 ) {
-  return position.eligible_gender === "all" || position.eligible_gender === candidateGender;
+  return isCandidateAllowedForPosition(candidateGender, position);
 }
 
 async function main() {
@@ -196,7 +197,7 @@ async function main() {
     "Asumsi: semua peserta CSV is_voter=true; kandidat tetap pemilih kecuali admin mengubahnya."
   );
   console.log(
-    "Asumsi: kandidat Ketua Umum berisi semua kandidat; sesi gender hanya berisi kandidat dengan gender yang sesuai."
+    "Asumsi: kandidat Ketua Umum hanya kandidat putra; sesi gender lain hanya berisi kandidat dengan gender yang sesuai."
   );
 
   if (warnings.length > 0) {

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
 import { createServiceSupabaseClient } from "@/lib/supabase";
-import { cleanText } from "@/lib/election";
-import type { Gender } from "@/lib/types";
+import { cleanText, isCandidateAllowedForPosition } from "@/lib/election";
+import type { Candidate, Gender, Position } from "@/lib/types";
 
 async function requireAdmin() {
   const admin = await getAdminSession();
@@ -26,6 +26,29 @@ async function loadCandidateContext() {
     candidates: candidates.data,
     participants: participants.data
   };
+}
+
+async function getPositionOrThrow(
+  supabase: ReturnType<typeof createServiceSupabaseClient>,
+  positionId: string
+) {
+  const { data, error } = await supabase
+    .from("positions")
+    .select("*")
+    .eq("id", positionId)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Position;
+}
+
+function assertCandidateAllowed(position: Position, gender: Gender | null) {
+  if (!isCandidateAllowedForPosition(gender, position)) {
+    throw new Error(
+      position.name === "Ketua Umum"
+        ? "Kandidat Ketua Umum wajib berjenis kelamin putra."
+        : `Kandidat ${position.name} harus sesuai dengan gender posisi.`
+    );
+  }
 }
 
 export async function GET() {
@@ -80,6 +103,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nama kandidat wajib diisi." }, { status: 400 });
     }
 
+    const position = await getPositionOrThrow(supabase, body.position_id);
+    assertCandidateAllowed(position, gender);
+
     const { data, error } = await supabase
       .from("candidates")
       .insert({
@@ -126,6 +152,35 @@ export async function PATCH(request: Request) {
 
   try {
     const supabase = createServiceSupabaseClient();
+    const { data: currentCandidate, error: currentError } = await supabase
+      .from("candidates")
+      .select("*")
+      .eq("id", body.id)
+      .single();
+    if (currentError) throw new Error(currentError.message);
+
+    const finalPositionId =
+      body.position_id ?? (currentCandidate as Candidate).position_id;
+    let finalGender =
+      body.gender !== undefined
+        ? body.gender
+        : (currentCandidate as Candidate).gender;
+
+    if (body.participant_id) {
+      const { data: participant, error } = await supabase
+        .from("participants")
+        .select("id,name,gender")
+        .eq("id", body.participant_id)
+        .single();
+      if (error) throw new Error(error.message);
+      patch.name = participant.name;
+      patch.gender = participant.gender;
+      finalGender = participant.gender;
+    }
+
+    const position = await getPositionOrThrow(supabase, finalPositionId);
+    assertCandidateAllowed(position, finalGender ?? null);
+
     const { data, error } = await supabase
       .from("candidates")
       .update(patch)
