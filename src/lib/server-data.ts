@@ -1,5 +1,6 @@
 import {
   computeSessionSummary,
+  getFinalAnnouncements,
   getActiveSession,
   sortSessionsByPosition
 } from "@/lib/election";
@@ -74,6 +75,7 @@ export function buildAdminOverview(snapshot: ElectionSnapshot) {
       candidates: snapshot.participants.filter((participant) => participant.is_candidate)
         .length
     },
+    final_announcements: getFinalAnnouncements(snapshot),
     generated_at: new Date().toISOString()
   };
 }
@@ -92,6 +94,7 @@ export function buildPublicOverview(snapshot: ElectionSnapshot) {
 
   return {
     summary,
+    final_announcements: getFinalAnnouncements(snapshot),
     generated_at: new Date().toISOString()
   };
 }

@@ -68,6 +68,7 @@ export type VotingDeviceState = {
 
 export type CandidateResult = {
   candidate_id: string;
+  participant_id?: string | null;
   name: string;
   gender: Gender | null;
   votes: number;
@@ -97,6 +98,13 @@ export type SessionSummary = {
   voted_participants: Participant[];
   remaining_participants: Participant[];
   results: CandidateResult[] | null;
+};
+
+export type FinalAnnouncement = {
+  session: VotingSession;
+  position: Position;
+  results: CandidateResult[];
+  winner: CandidateResult | null;
 };
 
 export type ElectionSnapshot = {

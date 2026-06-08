@@ -4,6 +4,7 @@ import type {
   CandidateResult,
   ElectionSnapshot,
   EligibleGender,
+  FinalAnnouncement,
   Gender,
   Participant,
   ParticipantVoteStatus,
@@ -181,11 +182,95 @@ export function buildCandidateResults(
     .filter((candidate) => candidate.position_id === positionId)
     .map((candidate) => ({
       candidate_id: candidate.id,
+      participant_id: candidate.participant_id,
       name: candidate.name,
       gender: candidate.gender,
       votes: counts.get(candidate.id) ?? 0
     }))
     .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name, "id-ID"));
+}
+
+export function getSingleWinner(results: CandidateResult[]) {
+  const [winner, runnerUp] = results;
+  if (!winner || winner.votes <= 0) return null;
+  if (runnerUp && runnerUp.votes === winner.votes) return null;
+  return winner;
+}
+
+export function getFinalAnnouncements(snapshot: ElectionSnapshot): FinalAnnouncement[] {
+  return sortSessionsByPosition(snapshot.sessions, snapshot.positions)
+    .filter((session) => session.status === "hasil_diumumkan")
+    .map((session) => {
+      const position = snapshot.positions.find(
+        (item) => item.id === session.position_id
+      );
+      if (!position) {
+        throw new Error(`Position missing for session ${session.id}`);
+      }
+      const results = buildCandidateResults(
+        snapshot.candidates,
+        snapshot.votes,
+        position.id,
+        session.id
+      );
+      return {
+        session,
+        position,
+        results,
+        winner: getSingleWinner(results)
+      };
+    });
+}
+
+export function getPreviousElectedCandidateKeys(
+  snapshot: ElectionSnapshot,
+  currentSession: VotingSession
+) {
+  const orderByPositionId = new Map(
+    snapshot.positions.map((position) => [position.id, position.order_number])
+  );
+  const currentOrder = orderByPositionId.get(currentSession.position_id) ?? 0;
+  const winners = sortSessionsByPosition(snapshot.sessions, snapshot.positions)
+    .filter((session) => {
+      const order = orderByPositionId.get(session.position_id) ?? 0;
+      return (
+        order < currentOrder &&
+        (session.status === "ditutup" || session.status === "hasil_diumumkan")
+      );
+    })
+    .map((session) => {
+      const results = buildCandidateResults(
+        snapshot.candidates,
+        snapshot.votes,
+        session.position_id,
+        session.id
+      );
+      return getSingleWinner(results);
+    })
+    .filter((winner): winner is CandidateResult => Boolean(winner));
+
+  return {
+    participantIds: new Set(
+      winners
+        .map((winner) => winner.participant_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+    names: new Set(winners.map((winner) => normalizeName(winner.name)))
+  };
+}
+
+export function filterCandidatesForSession(
+  snapshot: ElectionSnapshot,
+  session: VotingSession,
+  candidates: Candidate[]
+) {
+  const elected = getPreviousElectedCandidateKeys(snapshot, session);
+  return candidates.filter((candidate) => {
+    if (candidate.participant_id && elected.participantIds.has(candidate.participant_id)) {
+      return false;
+    }
+    return !elected.names.has(normalizeName(candidate.name));
+  });
 }
 
 export function computeSessionSummary(

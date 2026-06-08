@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   applyDeviceVotingStates,
   buildParticipantVoteStatuses,
+  filterCandidatesForSession,
   getActiveSession,
   isDeviceAllowedForPosition,
   sortSessionsByPosition
@@ -81,8 +82,12 @@ export async function GET(request: Request) {
       position,
       participants,
       candidates: allowed
-        ? snapshot.candidates.filter(
-            (candidate) => candidate.position_id === position.id
+        ? filterCandidatesForSession(
+            snapshot,
+            activeSession,
+            snapshot.candidates.filter(
+              (candidate) => candidate.position_id === position.id
+            )
           )
         : []
     });

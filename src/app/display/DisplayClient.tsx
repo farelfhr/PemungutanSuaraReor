@@ -7,12 +7,13 @@ import { Button, EmptyState, ProgressBar, Stat } from "@/components/ui";
 import { fetchJson } from "@/lib/client-fetch";
 import { statusLabel } from "@/lib/election";
 import { useRealtimeRefresh } from "@/lib/realtime";
-import type { SessionSummary } from "@/lib/types";
+import type { FinalAnnouncement, SessionSummary } from "@/lib/types";
 
 const REALTIME_TABLES = ["participants", "voting_sessions", "candidates"];
 
 type DisplayOverview = {
   summary: SessionSummary | null;
+  final_announcements: FinalAnnouncement[];
   generated_at: string;
 };
 
@@ -20,6 +21,7 @@ export function DisplayClient() {
   const [overview, setOverview] = useState<DisplayOverview | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedAnnouncementId, setSelectedAnnouncementId] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -41,6 +43,11 @@ export function DisplayClient() {
   useRealtimeRefresh(REALTIME_TABLES, load);
 
   const summary = overview?.summary ?? null;
+  const finalAnnouncements = overview?.final_announcements ?? [];
+  const selectedAnnouncement =
+    finalAnnouncements.find(
+      (announcement) => announcement.session.id === selectedAnnouncementId
+    ) ?? null;
 
   return (
     <main className="min-h-screen bg-white px-6 py-6 text-slate-950">
@@ -83,6 +90,95 @@ export function DisplayClient() {
           <EmptyState title="Belum ada sesi voting." />
         ) : (
           <div className="space-y-8">
+            {finalAnnouncements.length > 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
+                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <h2 className="text-2xl font-bold text-slate-950">
+                    Pengumuman Hasil Final
+                  </h2>
+                  {selectedAnnouncement ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setSelectedAnnouncementId("")}
+                    >
+                      Tampilkan Progres Terkini
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {finalAnnouncements.map((announcement) => (
+                    <Button
+                      key={announcement.session.id}
+                      variant={
+                        selectedAnnouncementId === announcement.session.id
+                          ? "primary"
+                          : "secondary"
+                      }
+                      onClick={() => setSelectedAnnouncementId(announcement.session.id)}
+                    >
+                      Lihat Pengumuman Hasil Suara {announcement.position.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {selectedAnnouncement ? (
+              <div className="space-y-8">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-8">
+                  <p className="text-2xl font-bold text-primary-700">
+                    Pengumuman Hasil Suara
+                  </p>
+                  <h2 className="mt-2 text-6xl font-bold leading-tight text-slate-950">
+                    {selectedAnnouncement.position.name}
+                  </h2>
+                  {selectedAnnouncement.winner ? (
+                    <div className="mt-8 rounded-lg bg-white p-6 shadow-soft">
+                      <div className="text-xl font-semibold text-slate-500">
+                        Terpilih
+                      </div>
+                      <div className="mt-2 text-5xl font-bold text-primary-700">
+                        {selectedAnnouncement.winner.name}
+                      </div>
+                      <div className="mt-2 text-2xl font-bold text-slate-700">
+                        {selectedAnnouncement.winner.votes} suara
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-5 text-2xl font-bold text-amber-800">
+                      Belum ada pemenang tunggal pada sesi ini.
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-8 shadow-soft">
+                  <h2 className="mb-5 text-4xl font-bold text-slate-950">
+                    Statistik Suara
+                  </h2>
+                  <div className="grid gap-3">
+                    {selectedAnnouncement.results.map((result, index) => (
+                      <div
+                        key={result.candidate_id}
+                        className="flex items-center justify-between rounded-md bg-slate-50 px-5 py-4"
+                      >
+                        <div>
+                          <div className="text-lg font-bold text-primary-700">
+                            Peringkat {index + 1}
+                          </div>
+                          <div className="text-3xl font-bold text-slate-900">
+                            {result.name}
+                          </div>
+                        </div>
+                        <div className="text-4xl font-bold text-primary-700">
+                          {result.votes} suara
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -150,6 +246,8 @@ export function DisplayClient() {
                 </div>
               </div>
             ) : null}
+              </>
+            )}
           </div>
         )}
       </section>

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { filterCandidatesForSession } from "@/lib/election";
+import { fetchElectionSnapshot } from "@/lib/server-data";
 import { createServiceSupabaseClient } from "@/lib/supabase";
 import type { Gender } from "@/lib/types";
 
@@ -22,6 +24,23 @@ export async function POST(request: Request) {
   }
 
   try {
+    const snapshot = await fetchElectionSnapshot();
+    const session = snapshot.sessions.find((item) => item.id === body.session_id);
+    if (!session) throw new Error("Sesi voting tidak ditemukan.");
+
+    const allowedCandidateIds = new Set(
+      filterCandidatesForSession(
+        snapshot,
+        session,
+        snapshot.candidates.filter(
+          (candidate) => candidate.position_id === session.position_id
+        )
+      ).map((candidate) => candidate.id)
+    );
+    if (!allowedCandidateIds.has(body.candidate_id)) {
+      throw new Error("Kandidat ini sudah terpilih pada sesi sebelumnya.");
+    }
+
     const supabase = createServiceSupabaseClient();
     const { data, error } = await supabase.rpc("submit_vote", {
       p_session_id: body.session_id,
