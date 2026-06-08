@@ -10,6 +10,7 @@ import {
   LogOut,
   Play,
   RefreshCcw,
+  RotateCcw,
   Square,
   UsersRound
 } from "lucide-react";
@@ -51,6 +52,7 @@ export function AdminDashboardClient() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState("");
   const [closeTarget, setCloseTarget] = useState<SessionSummary | null>(null);
+  const [resetTarget, setResetTarget] = useState<SessionSummary | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -83,6 +85,7 @@ export function AdminDashboardClient() {
     } finally {
       setActionLoading("");
       setCloseTarget(null);
+      setResetTarget(null);
     }
   }
 
@@ -271,6 +274,16 @@ export function AdminDashboardClient() {
                       Umumkan Hasil
                     </Button>
                   ) : null}
+                  {summary.session.status !== "belum_dibuka" ? (
+                    <Button
+                      variant="danger"
+                      disabled={Boolean(actionLoading)}
+                      onClick={() => setResetTarget(summary)}
+                    >
+                      <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                      Reset Sesi
+                    </Button>
+                  ) : null}
                 </div>
 
                 {summary.results ? <ResultsList summary={summary} /> : null}
@@ -326,6 +339,32 @@ export function AdminDashboardClient() {
               }
             >
               Ya, Akhiri Sesi
+            </Button>
+          </div>
+        </Modal>
+      ) : null}
+
+      {resetTarget ? (
+        <Modal
+          title="Reset sesi?"
+          description={`Semua suara untuk ${resetTarget.position.name} akan dihapus dan status sesi kembali ke belum dibuka. Sesi ini bisa dibuka ulang setelah reset.`}
+          onClose={() => setResetTarget(null)}
+        >
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setResetTarget(null)}>
+              Batalkan
+            </Button>
+            <Button
+              variant="danger"
+              disabled={Boolean(actionLoading)}
+              onClick={() =>
+                runAction(
+                  `reset-${resetTarget.session.id}`,
+                  `/api/admin/sessions/${resetTarget.session.id}/reset`
+                )
+              }
+            >
+              Ya, Reset Sesi
             </Button>
           </div>
         </Modal>
