@@ -55,3 +55,5 @@ $$;
 
 revoke all on function public.reset_voting_session(uuid) from public;
 grant execute on function public.reset_voting_session(uuid) to service_role;
+
+notify pgrst, 'reload schema';
